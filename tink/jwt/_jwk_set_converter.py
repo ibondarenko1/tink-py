@@ -299,6 +299,10 @@ def to_public_keyset_handle(jwk_set: str) -> tink.KeysetHandle:
     keys_dict = json.loads(jwk_set, object_pairs_hook=_reject_duplicate_keys)
   except json.decoder.JSONDecodeError as e:
     raise tink.TinkError('error parsing JWK set: %s' % e.msg)
+  except RecursionError as e:
+    raise tink.TinkError('error parsing JWK set: too deeply nested') from e
+  if not isinstance(keys_dict, dict):
+    raise tink.TinkError('invalid JWK set: must be a JSON object')
   if 'keys' not in keys_dict:
     raise tink.TinkError('invalid JWK set: keys not found')
   if not isinstance(keys_dict['keys'], list):
@@ -344,7 +348,8 @@ def _validate_use_and_key_ops(key: Dict[str, Union[str, List[str]]]):
   """Checks that 'key_ops' and 'use' have the right values if present."""
   if 'key_ops' in key:
     key_ops = key['key_ops']
-    if len(key_ops) != 1 or key_ops[0] != 'verify':
+    if (not isinstance(key_ops, list) or len(key_ops) != 1 or
+        key_ops[0] != 'verify'):
       raise tink.TinkError('invalid key_ops')
   if 'use' in key and key['use'] != 'sig':
     raise tink.TinkError('invalid use')

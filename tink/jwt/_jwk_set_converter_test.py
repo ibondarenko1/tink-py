@@ -883,5 +883,35 @@ class JwkSetConverterTest(parameterized.TestCase):
     with self.assertRaises(tink.TinkError):
       jwt.jwk_set_to_public_keyset_handle(jwk_set)
 
+  @parameterized.parameters(
+      ('123',),
+      ('null',),
+      ('1.5',),
+      ('true',),
+      ('[]',),
+      ('"prefix keys suffix"',),
+  )
+  def test_jwk_set_with_non_dict_json_raises_tink_error(self, jwk_set):
+    with self.assertRaises(tink.TinkError):
+      jwt.jwk_set_to_public_keyset_handle(jwk_set)
+
+  def test_jwk_set_with_deeply_nested_json_raises_tink_error(self):
+    jwk_set = '{"keys":' + '{"a":' * 10000 + '}' * 10000 + '}'
+    with self.assertRaises(tink.TinkError):
+      jwt.jwk_set_to_public_keyset_handle(jwk_set)
+
+  @parameterized.parameters(
+      ('{"keys":[{"alg":"ES256","kty":"EC","crv":"P-256","key_ops":123}]}',),
+      ('{"keys":[{"alg":"ES256","kty":"EC","crv":"P-256","key_ops":null}]}',),
+      ('{"keys":[{"alg":"ES256","kty":"EC","crv":"P-256",'
+       '"key_ops":{"0":"verify"}}]}',),
+      ('{"keys":[{"alg":"RS256","kty":"RSA","key_ops":123}]}',),
+      ('{"keys":[{"alg":"PS256","kty":"RSA","key_ops":{"0":"verify"}}]}',),
+  )
+  def test_jwk_set_with_non_list_key_ops_raises_tink_error(self, jwk_set):
+    with self.assertRaises(tink.TinkError):
+      jwt.jwk_set_to_public_keyset_handle(jwk_set)
+
+
 if __name__ == '__main__':
   absltest.main()
